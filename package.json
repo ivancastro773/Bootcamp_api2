@@ -19,6 +19,7 @@
   "homepage": "https://github.com/ivancastro773/bootcampapi2#readme",
   "dependencies": {
     "cors": "^2.8.5",
+    "dayjs": "^1.10.7",
     "esm": "^3.2.25",
     "express": "^4.17.1",
     "method-override": "^3.0.0",

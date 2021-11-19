@@ -2,6 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const methodOverride = require("method-override");
 const multer = require("multer");
+const dayjs = require('dayjs');
+const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 let port = process.env.PORT || 3000;
@@ -10,6 +12,19 @@ app.use(cors());
 app.use(methodOverride());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+const multerConfig = multer.diskStorage({
+    destination:function(req,file,cb){
+        cb(null,"./bucket");
+    },
+    filename:function(req,file,cb){
+        let idImg = uuidv4().split("-")[0];
+        let day = dayjs().format('DD-MM-YYYY')
+        cb(null,`${day}.${idImg}.${file.originalname}`);
+    }
+});
+
+const multerMiddle = multer({storage:multerConfig});
 
 let users = [{email:"ivan@gmail.com",name:"ivan",pass:"1234"},
               {email:"tomas@gmail.com",name:"tomas",pass:"123"},
@@ -27,18 +42,25 @@ app.get("/user/:email", (req, res) => {
     var ObjForEmail = users.find(item => item.email==email);
     res.send(ObjForEmail);
 });
-//revisar 
-app.get("/user/:email1/:email2", (req, res) => {
-    var email1 = req.params.email1;
-    var email2 = req.params.email2;
-    var array = [];
-    var ObjForEmail1 = users.find(item => item.email==email1);
-    var ObjForEmail2 = users.find(item => item.email==email2);
-    array.push(ObjForEmail1,ObjForEmail2);
-    res.send(array);
-});
+
+app.get("/usersEmail/:email",(req,res)=>{
+    console.log("entro");
+    let email= req.params.email;
+    let arrayEmail=email.split(",");
+    console.log(arrayEmail);
+    let response=[];
+
+    arrayEmail.forEach((email)=>{
+        users.forEach((user)=>{
+            if(user.email==email){
+                response.push(user)
+            }
+        })
+    })
+    res.send(response);
+})
 //Por query
-app.get("/user", (req, res) => {
+app.get("/user-query", (req, res) => {
     const name = req.query.name;
     const ObjForname = users.filter(item => item.name==name);
     res.send(ObjForname);
@@ -60,17 +82,53 @@ app.post("/user", (req, res) => {
     }
 });
 //eliminar
-app.delete("/user/:email", (req, res) => {
+app.delete("/user/deleteForEmail/:email", (req, res) => {
     const email = req.params.email;
-    const userDelete = users.splice(users.indexOf(email),1);
+    users= users.filter((elemento)=>elemento.email!=email) 
+
     res.send("Usuario eliminado");
 });
-app.delete("/user", (req, res) => {
-    const email1 = req.query.email1;
-    for (let i = 0; i < email1.length; i++) {
-        /* if(email1[i]==users.email)  */
+
+app.delete("/user/delete",(req,res)=>{
+    let mail= req.query.mail;
+    mail.forEach(para=>{   
+        users= users.filter((elemento)=>elemento.email!=para) 
+    })
+    res.send("usuarios eliminado");
+});
+
+app.post("/user/update",(req,res)=>{
+    let email= req.body.email;
+    let name= req.body.name;
+    let password= req.body.password;
+    let leng=users.length
+    for(let i=0;i<leng;i++){
+        if(users[i].email==email){
+            users[i].name=name;
+            users[i].pass=password
+        }
     }
-    res.send("borrado"); 
+    res.send("el usuario fue actualizado");
+});
+
+app.post("/registro/usuario",multerMiddle.single("file"),(req,res)=>{
+    const email = req.body.email;
+    const name = req.body.name;
+    const password = req.body.password;
+    const file = req.body.file;
+    console.log("entro");
+    const obj = {
+        email: email,
+        name: name,
+        pass: password,
+        file: file
+    }
+    if(file == ""){
+        res.send("No se cargo la imagen");
+    }else{
+        users.push(obj);
+        res.send("Usuario creado!");
+    }
 });
 
 app.listen(port, () => {
